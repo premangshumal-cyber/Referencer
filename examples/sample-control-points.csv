@@ -1,0 +1,5 @@
+id,pixel_u,pixel_v,graph_x,graph_y,enabled
+A,0,300,0,0,true
+B,400,300,100,0,true
+C,0,0,0,50,true
+D,400,0,100,50,true
