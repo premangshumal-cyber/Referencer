@@ -9,7 +9,7 @@ Referencer is a local-first scientific image calibration and vector digitization
 3. Click Pick reference locations, click known image positions, enter Graph X/Y in the control table, and click Calibrate image.
 4. Hover to verify graph coordinates and numerical RMS pixel residuals.
 5. Choose Point, Line or Polygon. Click vertices. Press Enter or double-click to finish lines and polygons; Escape cancels.
-6. Choose Select to move features and individual vertex handles. Open the Inspector to see measurements and edit feature attributes.
+6. Choose Select to move features and individual vertex handles. Alt-click an existing line/polygon segment to insert a vertex, or Alt-click a selected vertex handle to remove it. Double-click a layer name to rename it; use the layer action controls to hide, lock, reorder or remove it. Open the Inspector to see measurements and edit feature attributes.
 7. Click Export data, choose a layer and Download Shapefile ZIP.
 8. In QGIS, use Layer > Add Vector Layer on the extracted SHP. In ArcGIS Pro use Map > Add Data on the extracted SHP.
 9. Save project downloads a self-contained JSON project with its embedded original image. Open project reopens it. Browser autosave uses IndexedDB.
@@ -40,7 +40,7 @@ Tests validate affine/axis/projective/logarithmic calibration, geometry, inverse
 
 ## Limitations
 
-This release supports one image per project. Advanced functions not yet available: TIFF decoding, multipage/project images, polygon holes, intermediate-vertex insertion/deletion, splitting and joining lines, automated line tracing, CRS transformation, coordinate-preserving recalibration and GeoTIFF raster rectification. Topology validation detects simple polygon self-intersections; it is not a full topology engine. Only EPSG:4326 and EPSG:3857 built-in coordinate reference definitions are provided. Shapefile custom attributes are flattened and abbreviated to traditional DBF names.
+This release supports one image per project. Advanced functions not yet available: TIFF decoding, multipage/project images, polygon holes, splitting and joining lines, automated line tracing, CRS transformation, coordinate-preserving recalibration and GeoTIFF raster rectification. Topology validation detects simple polygon self-intersections; it is not a full topology engine. Only EPSG:4326 and EPSG:3857 built-in coordinate reference definitions are provided. Shapefile custom attributes are flattened and abbreviated to traditional DBF names.
 
 Digitized Shapefiles should be independently inspected in QGIS or ArcGIS Pro for important scientific applications.
 
