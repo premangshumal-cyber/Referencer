@@ -24,7 +24,7 @@ Lengths and polygon areas are coordinate-space computations unless coordinates a
 
 ## Exports
 
-Shapefile ZIP per geometry-homogeneous layer, full vertex CSV, GCP CSV, JSON project, SVG and PNG rendering, and affine world file when appropriate.
+Shapefile ZIP per geometry-homogeneous layer, full vertex CSV, measurements CSV, GCP CSV with pixel residuals, GeoJSON for explicitly verified WGS84 coordinates only, JSON project, SVG and PNG rendering, and affine world file when appropriate.
 
 ## Development
 
