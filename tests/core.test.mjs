@@ -87,7 +87,7 @@ test('point line and polygon Shapefile ZIPs have valid binary SHP SHX DBF',async
   assert.equal(shx.getInt32(24,false)*2,entries[name+'.shx'].length);
   assert.equal(entries[name+'.dbf'][4],1);
   if(type==='point'){eq(shp.getFloat64(112,true),4);eq(shp.getFloat64(120,true),5);}
-  if(type==='polygon')assert.equal(shp.getInt32(144,true),5);
+  if(type==='polygon'){assert.equal(shp.getInt32(144,true),1);assert.equal(shp.getInt32(148,true),5);}
  }
 });
 test('arbitrary Cartesian Shapefiles do not fabricate a .prj',async()=>{
