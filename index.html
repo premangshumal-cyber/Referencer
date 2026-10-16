@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101825">
+  <meta name="description" content="Referencer — a local-first Cartesian graph calibration and GIS digitization workspace.">
+  <title>Referencer — Cartesian Image Digitizer</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand"><span class="brandmark">R<span>+</span></span><span>Referencer<small>SCIENTIFIC GIS STUDIO</small></span></div>
+    <div class="top-separator"></div>
+    <label class="project-wrap"><span>PROJECT</span><input id="projectName" value="Untitled project" spellcheck="false" aria-label="Project name"></label>
+    <div class="top-actions">
+      <button id="newProject" class="quiet" title="Create a new project">New</button>
+      <button id="openProject" class="quiet">Open project</button>
+      <button id="saveProject" class="quiet" title="Download a portable project file">Save project</button>
+      <span class="action-divider"></span>
+      <button id="undo" class="icon-button" title="Undo (Ctrl+Z)">↶</button><button id="redo" class="icon-button" title="Redo (Ctrl+Y)">↷</button>
+      <button id="exportButton" class="primary">Export data ↗</button>
+    </div>
+  </header>
+  <main class="layout">
+    <aside class="sidebar left-sidebar">
+      <div class="sidebar-heading"><strong>WORKSPACE</strong><span class="pill">LOCAL-FIRST</span></div>
+      <section class="panel">
+        <h2><span class="step">01</span> Image source</h2>
+        <label for="imageFile" class="upload-area" id="uploadArea">
+          <span class="upload-icon">↥</span><strong>Import graph image</strong><span>PNG, JPEG, WebP, BMP</span><small>Drop an image here, or click to browse</small>
+        </label>
+        <input id="imageFile" type="file" accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff,.tif,.tiff" hidden>
+        <div class="file-information" id="imageInfo">No image imported</div>
+        <div class="button-row"><button id="fitButton" class="minor">Fit image</button><button id="actualButton" class="minor">100%</button><button id="gridButton" class="minor" aria-pressed="false">Grid</button></div>
+      </section>
+      <section class="panel">
+        <div class="section-title"><h2><span class="step">02</span> Calibration</h2><span id="calStatus" class="status-badge waiting">Uncalibrated</span></div>
+        <label class="field">Transformation model
+          <select id="model"><option value="affine">Affine (3+ references)</option><option value="axis">Axis aligned (2+ references)</option><option value="projective">Projective / perspective (4+)</option></select>
+        </label>
+        <div class="two-fields"><label class="field">X axis<select id="xAxis"><option value="linear">Linear</option><option value="log">Log₁₀</option></select></label><label class="field">Y axis<select id="yAxis"><option value="linear">Linear</option><option value="log">Log₁₀</option></select></label></div>
+        <button class="outline full-width" id="gcpMode">＋ Pick reference locations</button>
+        <p class="helper">Pick known locations in the image, enter their actual X/Y coordinates below, then calibrate.</p>
+        <div class="table-scroll"><table class="gcp-table"><thead><tr><th>On</th><th>Pixel U</th><th>Pixel V</th><th>Graph X</th><th>Graph Y</th><th></th></tr></thead><tbody id="controlTable"><tr><td colspan="6" class="empty-table">No control points</td></tr></tbody></table></div>
+        <div class="button-row"><button id="calibrate" class="primary grow">Calibrate image</button><button id="clearControls" class="minor" title="Remove all reference points">Clear</button></div>
+        <div id="calReport" class="cal-report">Add control points to define the coordinate transformation.</div>
+      </section>
+      <section class="panel">
+        <h2><span class="step">03</span> Coordinate space</h2>
+        <label class="field">Coordinates represent<select id="crs"><option value="cartesian">Arbitrary Cartesian / unknown</option><option value="local">Local engineering coordinates</option><option value="epsg:3857">EPSG:3857 · projected metres</option><option value="epsg:4326">EPSG:4326 · longitude / latitude</option></select></label>
+        <div class="two-fields"><label class="field">X units<input id="xUnit" value="units" placeholder="metres, seconds…"></label><label class="field">Y units<input id="yUnit" value="units" placeholder="metres, rainfall…"></label></div>
+        <p id="unitWarning" class="helper">Measurements are coordinate-space values, not automatically physical lengths or areas.</p>
+      </section>
+      <section class="panel">
+        <div class="section-title"><h2><span class="step">04</span> Vector layers</h2><button id="addLayer" class="minor compact">＋ Layer</button></div>
+        <div id="layerList" class="layer-list"></div>
+        <label class="field">New layer type<select id="newLayerType"><option value="point">Point</option><option value="line">Polyline</option><option value="polygon">Polygon</option></select></label>
+      </section>
+      <div class="side-foot">Data is processed in your browser. No account or server upload required.</div>
+    </aside>
+    <section class="canvas-shell">
+      <div class="canvas-toolbar">
+        <span class="canvas-label">DIGITIZATION</span>
+        <div class="tool-group" role="toolbar" aria-label="Digitization tools">
+          <button class="tool active" data-tool="pan" title="Pan image (Space + drag)">✥ <span>Pan</span></button>
+          <button class="tool" data-tool="select" title="Select, move and edit existing features">⌖ <span>Select</span></button>
+          <button class="tool" data-tool="point" title="Add a point">• <span>Point</span></button>
+          <button class="tool" data-tool="line" title="Trace a polyline; Enter or double-click to finish">⌁ <span>Line</span></button>
+          <button class="tool" data-tool="polygon" title="Draw a polygon; Enter or double-click to finish">⬡ <span>Polygon</span></button>
+        </div>
+        <div class="canvas-right-tools"><button id="zoomOut" class="icon-button" title="Zoom out">−</button><output id="zoomOutput">100%</output><button id="zoomIn" class="icon-button" title="Zoom in">+</button><button id="centerButton" class="icon-button" title="Fit image">⤢</button></div>
+      </div>
+      <div id="viewport" class="viewport" tabindex="0" aria-label="Image digitization workspace">
+        <div id="world" class="world"><img id="raster" alt="Imported graph" draggable="false"><svg id="overlay" xmlns="http://www.w3.org/2000/svg"></svg></div>
+        <div class="welcome" id="welcome">
+          <span class="welcome-symbol">⌗</span><span class="welcome-label">YOUR WORKSPACE IS READY</span><h1>Turn graphs into<br><em>precise GIS data.</em></h1>
+          <p>Import an image, calibrate known Cartesian coordinates, then trace editable points, lines, and polygons.</p>
+          <button id="welcomeImport" class="primary large">＋ Import your first image</button>
+          <div class="welcome-steps"><span>01 Import</span><b>→</b><span>02 Reference</span><b>→</b><span>03 Digitize</span><b>→</b><span>04 Export</span></div>
+        </div>
+        <div id="crosshairLabel" class="crosshair-label" hidden></div>
+        <div id="toast" role="status" aria-live="polite"></div>
+      </div>
+      <footer class="statusbar"><span id="cursorPixel">PIXEL —, —</span><span id="cursorGraph">X — · Y —</span><span id="statusCrs">ARBITRARY CARTESIAN</span><span id="saveStatus">Ready</span></footer>
+    </section>
+    <aside class="sidebar right-sidebar">
+      <div class="sidebar-heading"><strong>INSPECTOR</strong><span class="muted">PROPERTIES</span></div>
+      <section class="panel inspector-panel">
+        <h2>Feature properties</h2>
+        <div id="featureInspector" class="inspector-empty"><span class="inspector-graphic">◇</span><strong>Nothing selected</strong><p>Select a vector feature in the workspace to inspect its coordinates, measurements, and attributes.</p></div>
+      </section>
+      <section class="panel">
+        <h2>Coordinate inspector</h2>
+        <div class="coordinate-cards"><div><span>GRAPH X</span><strong id="inspectX">—</strong></div><div><span>GRAPH Y</span><strong id="inspectY">—</strong></div></div>
+        <div class="button-row"><button id="copyXY" class="minor full-width">Copy current X, Y</button></div>
+        <p class="helper">Move your cursor over the calibrated image to see the graph coordinates.</p>
+      </section>
+      <section class="panel">
+        <h2>Calibration details</h2>
+        <div id="detailReport" class="detail-report"><div><span>Model</span><strong>Not calibrated</strong></div><div><span>References</span><strong>0</strong></div><div><span>RMS pixel error</span><strong>—</strong></div></div>
+      </section>
+      <section class="panel tips-panel"><h2>Keyboard shortcuts</h2><div><span>Finish a line / polygon</span><kbd>Enter</kbd></div><div><span>Cancel drawing</span><kbd>Esc</kbd></div><div><span>Undo</span><kbd>Ctrl Z</kbd></div><div><span>Redo</span><kbd>Ctrl Y</kbd></div><div><span>Pan temporarily</span><kbd>Space</kbd></div><div><span>Delete selected</span><kbd>Del</kbd></div></section>
+    </aside>
+  </main>
+</div>
+<input id="projectFile" type="file" accept=".json,.referencer.json" hidden>
+<dialog id="exportDialog" class="export-dialog">
+  <form method="dialog" class="dialog-head"><h2>Export GIS data</h2><button class="icon-button" aria-label="Close">×</button></form>
+  <p>Export actual calibrated vector coordinates. Shapefiles are delivered as a ZIP containing .shp, .shx, .dbf and applicable CRS metadata.</p>
+  <label class="field">Choose layer<select id="exportLayer"></select></label>
+  <div class="export-actions">
+    <button type="button" class="primary" id="downloadSHP">Download Shapefile ZIP</button>
+    <button type="button" class="outline" id="downloadCSV">Download vertex CSV</button>
+    <button type="button" class="outline" id="downloadCalibration">Control points CSV</button>
+    <button type="button" class="outline" id="downloadSVG">Download SVG illustration</button>
+    <button type="button" class="outline" id="downloadPNG">Download PNG illustration</button>
+    <button type="button" class="outline" id="downloadWorld">Download affine world file</button>
+    <button type="button" class="outline" id="downloadJSON">Portable project JSON</button>
+  </div>
+  <p class="helper">Arbitrary Cartesian coordinates do not acquire a geographic CRS by export. Assign the correct coordinate system in your GIS software only when known.</p>
+</dialog>
+<script type="module" src="/src/app.js"></script>
+</body>
+</html>
