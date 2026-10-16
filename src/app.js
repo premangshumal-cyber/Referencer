@@ -1,4 +1,4 @@
-import {fitCalibration,forward,backward,measure,affineWorldFile} from './math.js';
+import {fitCalibration,forward,backward,measure,affineWorldFile,closeRing} from './math.js';
 import {shapefileZip,download,saveText,csvRows,vertexCSV} from './export.js';
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const id=()=>crypto.randomUUID(),number=v=>Number.isFinite(v)?Number(v).toLocaleString('en-US',{maximumFractionDigits:10}):'—';
@@ -110,8 +110,8 @@ function renderControls(){
  const el=$('controlTable');
  el.innerHTML=s.controls.length?s.controls.map((p,i)=>'<tr><td><input aria-label="Enable GCP '+(i+1)+'" type="checkbox" data-control="'+esc(p.id)+'" data-prop="enabled" '+(p.enabled===false?'':'checked')+'></td>'+
   ['u','v','x','y'].map(key=>'<td><input type="number" step="any" data-control="'+esc(p.id)+'" data-prop="'+key+'" aria-label="GCP '+(i+1)+' '+key+'" value="'+(p[key]??'')+'"></td>').join('')+
-  '<td><button data-delete-control="'+esc(p.id)+'" title="Delete control point">×</button></td></tr>').join(''):
- '<tr><td class="empty-table" colspan="6">No control points added</td></tr>';
+  '<td>'+esc(s.calibration?.residuals?.find(r=>r.id===p.id)?.pixelResidual===undefined?'—':number(s.calibration.residuals.find(r=>r.id===p.id).pixelResidual))+'</td><td><button data-delete-control="'+esc(p.id)+'" title="Delete control point">×</button></td></tr>').join(''):
+ '<tr><td class="empty-table" colspan="7">No control points added</td></tr>';
 }
 function renderLayers(){
  const el=$('layerList');
@@ -120,6 +120,7 @@ function renderLayers(){
   '<button class="layer-main" data-select-layer="'+esc(l.id)+'"><strong>'+esc(l.name)+'</strong><small>'+l.type+' · '+l.features.length+' feature'+(l.features.length===1?'':'s')+'</small></button>'+
   '<button title="'+(l.visible?'Hide':'Show')+' layer" data-toggle-layer="'+esc(l.id)+'">'+(l.visible?'◉':'○')+'</button>'+
   '<button title="'+(l.locked?'Unlock':'Lock')+' layer" data-lock-layer="'+esc(l.id)+'">'+(l.locked?'▣':'♢')+'</button>'+
+  '<input type="color" title="Layer color" data-color-layer="'+esc(l.id)+'" value="'+esc(l.color)+'">'+
   '<button title="Move layer up" data-up-layer="'+esc(l.id)+'">↑</button>'+
   '<button title="Remove layer" data-delete-layer="'+esc(l.id)+'">×</button>'+
   '</div>').join(''):'<p class="helper">No layers yet. Select a drawing tool or add a layer.</p>';
@@ -347,12 +348,34 @@ async function exportPNG(){
  if(!blob)throw Error('PNG export failed');download('referencer_digitization.png',blob);
 }
 function requireCalibration(){if(!s.calibration)throw Error('Calibrate the image with valid control points first.');}
+function measurementsCSV(){
+ const rows=[['layer','feature_id','feature_name','type','vertices','x','y','length','length_unit','area','area_unit','perimeter','valid']];
+ for(const l of s.layers)for(const f of l.features){
+  const pts=f.pixels.map(p=>forward(s.calibration,...p)),m=measure(l.type,pts,s.crs,s.xUnit,s.yUnit);
+  rows.push([l.name,f.id,f.name,l.type,pts.length,m.x??'',m.y??'',m.length??'',m.unit??'',m.area??'',m.areaUnit??'',m.perimeter??'',m.invalid===undefined?'':!m.invalid]);
+ }
+ return csvRows(rows);
+}
+function makeGeoJSON(){
+ if(s.crs!=='epsg:4326')throw Error('GeoJSON requires verified EPSG:4326 longitude/latitude source coordinates. Change the CRS only if this is scientifically correct.');
+ const features=[];
+ for(const l of s.layers)for(const f of l.features){
+  const pts=f.pixels.map(p=>forward(s.calibration,...p));
+  if(pts.some(([x,y])=>!Number.isFinite(x)||!Number.isFinite(y)||Math.abs(x)>180||Math.abs(y)>90))throw Error('WGS84 coordinates must be within valid longitude/latitude ranges.');
+  const geometry=l.type==='point'?{type:'Point',coordinates:pts[0]}:l.type==='line'?{type:'LineString',coordinates:pts}:{type:'Polygon',coordinates:[closeRing(pts)]};
+  features.push({type:'Feature',id:f.id,geometry,properties:{name:f.name,layer:l.name,...f.attributes}});
+ }
+ if(!features.length)throw Error('No features available to export.');
+ return JSON.stringify({type:'FeatureCollection',features},null,2);
+}
 function exportData(kind){
  try{
   if(kind==='project'){saveProject();return;}
   if(!validImage())throw Error('Import an image first.');
   if(kind==='shp'){requireCalibration();const l=s.layers.find(l=>l.id===$('exportLayer').value);if(!l)throw Error('Choose a valid layer.');download(l.name.replace(/\W+/g,'_')+'.zip',shapefileZip(l,s.calibration,{forward,crs:s.crs,xUnit:s.xUnit,yUnit:s.yUnit}));}
   else if(kind==='csv'){requireCalibration();saveText('referencer_vertices.csv',vertexCSV(s.layers,s.calibration,forward),'text/csv;charset=utf-8');}
+  else if(kind==='measurements'){requireCalibration();saveText('referencer_measurements.csv',measurementsCSV(),'text/csv;charset=utf-8');}
+  else if(kind==='geojson'){requireCalibration();saveText('referencer_wgs84.geojson',makeGeoJSON(),'application/geo+json');}
   else if(kind==='controls'){saveText('referencer_control_points.csv',csvRows([['id','pixel_u','pixel_v','graph_x','graph_y','enabled','pixel_residual'],...s.controls.map(p=>[p.id,p.u,p.v,p.x,p.y,p.enabled!==false,s.calibration?.residuals?.find(r=>r.id===p.id)?.pixelResidual??''])]),'text/csv;charset=utf-8');}
   else if(kind==='svg')saveText('referencer_visualization.svg',graphicSvg(),'image/svg+xml');
   else if(kind==='png')exportPNG().then(()=>toast('PNG illustration downloaded.')).catch(e=>toast(e.message,true));
@@ -380,6 +403,12 @@ function wireEvents(){
  $('calibrate').addEventListener('click',applyCalibration);
  $('addLayer').addEventListener('click',()=>addLayer());
  $('layerList').addEventListener('click',chooseLayer);
+ $('layerList').addEventListener('change',e=>{
+  const el=e.target.closest('[data-color-layer]');if(!el)return;
+  const l=s.layers.find(item=>item.id===el.dataset.colorLayer);if(!l)return;
+  if(!/^#[0-9a-fA-F]{6}$/.test(el.value))return;
+  archiveSnapshot();l.color=el.value;changed();
+ });
  $('layerList').addEventListener('dblclick',e=>{
   const el=e.target.closest('[data-select-layer]');if(!el)return;
   const l=s.layers.find(item=>item.id===el.dataset.selectLayer);if(!l)return;
@@ -424,7 +453,7 @@ function wireEvents(){
   $('exportLayer').innerHTML=s.layers.map(l=>'<option value="'+esc(l.id)+'">'+esc(l.name)+' ('+l.type+', '+l.features.length+')</option>').join('');
   if(activeLayer())$('exportLayer').value=activeLayer().id;$('exportDialog').showModal();
  });
- for(const [el,type] of Object.entries({downloadSHP:'shp',downloadCSV:'csv',downloadCalibration:'controls',downloadSVG:'svg',downloadPNG:'png',downloadWorld:'world',downloadJSON:'project'}))$(el).addEventListener('click',()=>exportData(type));
+ for(const [el,type] of Object.entries({downloadSHP:'shp',downloadCSV:'csv',downloadMeasurements:'measurements',downloadGeoJSON:'geojson',downloadCalibration:'controls',downloadSVG:'svg',downloadPNG:'png',downloadWorld:'world',downloadJSON:'project'}))$(el).addEventListener('click',()=>exportData(type));
 }
 wireEvents();setSettingsInputs();render();
 initializeDB().then(async result=>{db=result;await restoreFromDB();}).catch(e=>{$('saveStatus').textContent='Local autosave unavailable';console.warn('IndexedDB',e.message);});
