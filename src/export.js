@@ -44,7 +44,7 @@ const shapeBytes=(type,points)=>{
  let ring=code===5?closeRing(points):points;
  // ESRI outer polygon rings use clockwise winding (negative signed area).
  if(code===5&&signedArea(ring)>0)ring=[...ring].reverse();
- const len=code===1?20:44+16*ring.length;
+ const len=code===1?20:48+16*ring.length;
  const a=new Uint8Array(len),v=new DataView(a.buffer);
  v.setInt32(0,code,true);
  if(code===1){
