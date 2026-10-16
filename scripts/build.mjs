@@ -10,4 +10,3 @@ let html=await readFile(path.join(root,'dist','index.html'),'utf8');
 html=html.replaceAll('href="/src/style.css"','href="./src/style.css"').replaceAll('src="/src/app.js"','src="./src/app.js"');
 await writeFile(path.join(root,'dist','index.html'),html);
 console.log('Built zero-dependency static Referencer release.');
-}
