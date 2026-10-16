@@ -1,1 +1,1 @@
-{"framework":null,"buildCommand":"npm run build","outputDirectory":"dist","cleanUrls":true}
+{"framework":null,"buildCommand":"npm run check","outputDirectory":"dist","cleanUrls":true}
