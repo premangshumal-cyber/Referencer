@@ -120,6 +120,8 @@ function renderLayers(){
   '<button class="layer-main" data-select-layer="'+esc(l.id)+'"><strong>'+esc(l.name)+'</strong><small>'+l.type+' · '+l.features.length+' feature'+(l.features.length===1?'':'s')+'</small></button>'+
   '<button title="'+(l.visible?'Hide':'Show')+' layer" data-toggle-layer="'+esc(l.id)+'">'+(l.visible?'◉':'○')+'</button>'+
   '<button title="'+(l.locked?'Unlock':'Lock')+' layer" data-lock-layer="'+esc(l.id)+'">'+(l.locked?'▣':'♢')+'</button>'+
+  '<button title="Move layer up" data-up-layer="'+esc(l.id)+'">↑</button>'+
+  '<button title="Remove layer" data-delete-layer="'+esc(l.id)+'">×</button>'+
   '</div>').join(''):'<p class="helper">No layers yet. Select a drawing tool or add a layer.</p>';
 }
 function renderInspector(){
@@ -171,6 +173,26 @@ function pointerDown(e){
   const data=closest(target,'data-feature'),found=featureById(data?.feature);
   if(found){
    s.selectedId=found.feature.id;s.activeLayerId=found.layer.id;
+   if(e.altKey&&!found.layer.locked){
+    const f=found.feature;
+    if(data.vertex!==undefined){
+     const min=found.layer.type==='point'?1:found.layer.type==='line'?2:3;
+     if(f.pixels.length<=min)toast('This geometry requires at least '+min+' vertices.',true);
+     else{archiveSnapshot();f.pixels.splice(Number(data.vertex),1);changed();toast('Vertex removed.');}
+     return;
+    }
+    if(found.layer.type!=='point'){
+     const points=f.pixels,edges=found.layer.type==='polygon'?points.length:points.length-1;
+     let best=Infinity,index=0,projected=pixel;
+     for(let i=0;i<edges;i++){
+      const a=points[i],b=points[(i+1)%points.length],dx=b[0]-a[0],dy=b[1]-a[1];
+      const t=Math.max(0,Math.min(1,((pixel[0]-a[0])*dx+(pixel[1]-a[1])*dy)/(dx*dx+dy*dy||1)));
+      const q=[a[0]+t*dx,a[1]+t*dy],d=Math.hypot(q[0]-pixel[0],q[1]-pixel[1]);
+      if(d<best){best=d;index=i+1;projected=q;}
+     }
+     archiveSnapshot();f.pixels.splice(index,0,projected);changed();toast('Vertex inserted. Drag the handle to refine it.');return;
+    }
+   }
    if(!found.layer.locked){
     archiveSnapshot();
     drag=data.vertex!==undefined?{kind:'vertex',id:found.feature.id,index:Number(data.vertex)}:
@@ -297,12 +319,14 @@ function updateControl(e){
  s.calibration=null;changed();
 }
 function chooseLayer(e){
- const b=e.target.closest('[data-select-layer], [data-toggle-layer], [data-lock-layer]');if(!b)return;
- const l=s.layers.find(l=>l.id===(b.dataset.selectLayer||b.dataset.toggleLayer||b.dataset.lockLayer));
+ const b=e.target.closest('[data-select-layer], [data-toggle-layer], [data-lock-layer], [data-up-layer], [data-delete-layer]');if(!b)return;
+ const l=s.layers.find(l=>l.id===(b.dataset.selectLayer||b.dataset.toggleLayer||b.dataset.lockLayer||b.dataset.upLayer||b.dataset.deleteLayer));
  if(!l)return;
  if(b.dataset.selectLayer){s.activeLayerId=l.id;s.selectedId=null;}
  if(b.dataset.toggleLayer){archiveSnapshot();l.visible=!l.visible;}
  if(b.dataset.lockLayer){archiveSnapshot();l.locked=!l.locked;}
+ if(b.dataset.upLayer){const index=s.layers.indexOf(l);if(index>0){archiveSnapshot();s.layers.splice(index,1);s.layers.splice(index-1,0,l);}}
+ if(b.dataset.deleteLayer){if(!confirm('Delete the layer "'+l.name+'" and all '+l.features.length+' features?'))return;archiveSnapshot();s.layers=s.layers.filter(item=>item.id!==l.id);if(s.activeLayerId===l.id)s.activeLayerId=s.layers[0]?.id||null;s.selectedId=null;}
  changed();
 }
 function graphicSvg(){
@@ -356,6 +380,12 @@ function wireEvents(){
  $('calibrate').addEventListener('click',applyCalibration);
  $('addLayer').addEventListener('click',()=>addLayer());
  $('layerList').addEventListener('click',chooseLayer);
+ $('layerList').addEventListener('dblclick',e=>{
+  const el=e.target.closest('[data-select-layer]');if(!el)return;
+  const l=s.layers.find(item=>item.id===el.dataset.selectLayer);if(!l)return;
+  const name=prompt('Rename layer:',l.name);if(name===null||!name.trim())return;
+  archiveSnapshot();l.name=name.trim();changed();
+ });
  $('projectName').addEventListener('input',e=>{s.projectName=e.target.value;scheduleSave();});
  $('newProject').addEventListener('click',()=>{if((validImage()||s.layers.length)&&!confirm('Create a new project? Unsaved work in this browser will be replaced.'))return;s=fresh();history=[];future=[];draft=null;lastCursor=null;setSettingsInputs();image.removeAttribute('src');changed();});
  $('saveProject').addEventListener('click',saveProject);
