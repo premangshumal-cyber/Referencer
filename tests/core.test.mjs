@@ -22,7 +22,7 @@ test('log axis: powers are fitted in log domain',()=>{
  const pts=[gcp(0,100,1,0),gcp(200,100,100,0),gcp(0,0,1,10)];
  const cal=fitCalibration(pts,'affine','log','linear');
  const [x,y]=forward(cal,100,50);eq(x,10);eq(y,5);
- assert.throws(()=>fitCalibration([gcp(0,0,0,0),...pts],'affine','log','linear'),/positive/);
+ assert.throws(()=>fitCalibration([gcp(50,20,0,0),...pts],'affine','log','linear'),/positive/);
 });
 test('reversed horizontal and vertical axes are supported',()=>{
  const cal=fitCalibration([gcp(0,0,100,100),gcp(100,0,0,100),gcp(0,100,100,0)]);
@@ -102,5 +102,5 @@ test('invalid polygon blocks export',()=>{
 test('CSV export preserves underlying transformed coordinates',()=>{
  const layer={name:'Line',type:'line',features:[{id:'f1',name:'L',pixels:[[0,300],[200,150]],attributes:{}}]};
  const csv=vertexCSV([layer],fitCalibration(controls),forward);
- assert.match(csv,/200,150/);assert.match(csv,/50,25/);
+ assert.match(csv,/200,150/);const row=csv.trim().split('\n')[2].trim().split(',');eq(Number(row[5]),50);eq(Number(row[6]),25);
 });
