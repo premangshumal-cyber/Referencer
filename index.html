@@ -43,7 +43,7 @@
         <div class="two-fields"><label class="field">X axis<select id="xAxis"><option value="linear">Linear</option><option value="log">Log₁₀</option></select></label><label class="field">Y axis<select id="yAxis"><option value="linear">Linear</option><option value="log">Log₁₀</option></select></label></div>
         <button class="outline full-width" id="gcpMode">＋ Pick reference locations</button>
         <p class="helper">Pick known locations in the image, enter their actual X/Y coordinates below, then calibrate.</p>
-        <div class="table-scroll"><table class="gcp-table"><thead><tr><th>On</th><th>Pixel U</th><th>Pixel V</th><th>Graph X</th><th>Graph Y</th><th></th></tr></thead><tbody id="controlTable"><tr><td colspan="6" class="empty-table">No control points</td></tr></tbody></table></div>
+        <div class="table-scroll"><table class="gcp-table"><thead><tr><th>On</th><th>Pixel U</th><th>Pixel V</th><th>Graph X</th><th>Graph Y</th><th>Err px</th><th></th></tr></thead><tbody id="controlTable"><tr><td colspan="7" class="empty-table">No control points</td></tr></tbody></table></div>
         <div class="button-row"><button id="calibrate" class="primary grow">Calibrate image</button><button id="clearControls" class="minor" title="Remove all reference points">Clear</button></div>
         <div id="calReport" class="cal-report">Add control points to define the coordinate transformation.</div>
       </section>
@@ -113,6 +113,8 @@
   <div class="export-actions">
     <button type="button" class="primary" id="downloadSHP">Download Shapefile ZIP</button>
     <button type="button" class="outline" id="downloadCSV">Download vertex CSV</button>
+    <button type="button" class="outline" id="downloadMeasurements">Measurements CSV</button>
+    <button type="button" class="outline" id="downloadGeoJSON">GeoJSON (WGS84 only)</button>
     <button type="button" class="outline" id="downloadCalibration">Control points CSV</button>
     <button type="button" class="outline" id="downloadSVG">Download SVG illustration</button>
     <button type="button" class="outline" id="downloadPNG">Download PNG illustration</button>
